@@ -9,6 +9,15 @@ disable-model-invocation: true
 
 OptMem is append-only: the tool can add and compress, never delete or reorganize. This skill performs a supervised reset — back up the store, export everything, curate the full list by judgment, then clear and re-import the user-approved result with original timestamps preserved.
 
+## Quality Is All You Need
+
+Append-only is OptMem's normal state; this skill is a rare, supervised exception, not routine maintenance. Run it when memory quality is observably hurting — misleading entries, noise drowning out durable facts — never as scheduled slimming.
+
+- The goal is a store where every entry is durable and true, not a smaller store. There is no target reduction, and a run that changes nothing is a good outcome.
+- Keep is the default. Every deletion needs an affirmative reason from the Delete criteria; "old", "probably useless", and "takes space" are not reasons.
+- Prefer merge or rewrite over delete whenever the underlying facts are still true: merging and rewriting preserve information, deletion destroys it.
+- Size is already bounded by OptMem itself: `ENTRY_CHARS` caps every entry (280 bytes by default), `nap` folds old blocks into fixed-size tree summaries, and `wake` prints at most `WAKE_LINES` lines. The store can grow safely without any cleaner's help; what OptMem cannot do alone is expel bad memories. Improving quality is the only thing this skill adds — and all it needs to do. Never delete a still-true fact to save space.
+
 ## Safety contract
 
 - Destructive by design. Every destructive step waits for explicit user confirmation, and a verified backup exists before the store is touched. In auto mode the user pre-authorizes the whole run by invoking with `auto`; the verified backup is still created first.
@@ -18,16 +27,18 @@ OptMem is append-only: the tool can add and compress, never delete or reorganize
 
 ## Cleaning criteria
 
-Present these bullets at the start of the run and let the user edit them before curation. They are the session's single source of truth for keep / merge / delete decisions; the user may also edit them directly in this file.
+Present these bullets at the start of the run and let the user edit them before curation. They are the session's single source of truth for keep / merge / delete decisions; the user may also edit them directly in this file. They implement Quality, not quantity: the criteria exist to identify bad memories, not to shrink the list — an entry stays unless it positively matches a Delete bullet.
 
 ### Keep
 
+- Keep is the default: an entry needs no justification to stay. Anything that does not positively match a Delete bullet remains in the store.
 - Durable facts, decisions, preferences, and insights that are still true and useful beyond the session that produced them.
 - Anything a future session would want to know about the project, the user, or its environment.
 - Disproven approaches and dead ends: keep the conclusion that they failed. They stop future sessions from retrying them.
 
 ### Merge
 
+- Merge is this skill's only form of reduction: it lowers the count without losing any fact. Prefer it over delete whenever the sources still hold true facts.
 - Entries about the same topic, decision, or correction chain.
 - A correction chain collapses to its final state; drop the intermediate links and note the final correction date. Exception: if the disproven belief is one a future session is likely to re-form (because it is plausible or documented somewhere), keep one short "X is not true" note.
 - Multi-round progress notes about one effort: collapse into a single outcome entry.
@@ -37,6 +48,7 @@ Present these bullets at the start of the run and let the user edit them before 
 
 ### Delete
 
+- Delete is reserved for entries with zero or negative value for future sessions — content that misleads, adds noise, or duplicates. Cite the specific bullet behind every deletion.
 - Content that should never have been recorded in the first place: work logs (finished tasks, commits, validations run — git history already holds these), transient state (current progress, next steps, which files are staged), and operational rules useful only for the one task that produced them.
 - Work logs often smuggle facts inside them ("X was done/changed/fixed, because Y"). Extract any durable fact into a standalone entry stated as a fact, then delete the log. If the fact is recoverable from the docs, keep nothing.
 - Pure status or progress logs with no durable content.
@@ -45,6 +57,7 @@ Present these bullets at the start of the run and let the user edit them before 
 - Ephemeral details that are no longer true and cannot be useful later.
 - Content substantively covered by the project's own documentation (AGENTS.md, docs/, ADRs), regardless of wording.
 - Entries whose value rests on an artifact that no longer exists (a deleted plan, report, or fixture file). If the entry still has standalone value once the pointer is removed, rewrite it instead of deleting it.
+- Do not delete for size or age: a still-true, harmless entry stays no matter how old or minor it seems. Volume is compression's job, not this skill's.
 
 ### Flag for the user
 
@@ -122,7 +135,7 @@ If the invocation includes the word `auto` (for example `/optmem-cleaner auto`),
 13. **Verify** — Run `memo wake` once and read to the end of its output. Confirm the new entries appear and `You are awake.` is printed.
     Done when: wake succeeds and shows the new store.
 
-14. **Finish** — Report old count → new count, the date range, the archive folder, and the backup location. If the memory directory is git-tracked, add the memory store paths explicitly and commit `chore(optmem): clean memory`, then follow the repository's push convention if one exists.
+14. **Finish** — Report old count → new count, the date range, the archive folder, and the backup location. Frame the counts as a quality outcome, not a slimming achievement. If a large share of the store was deleted, say so plainly: it means too much noise was being recorded upstream, and the note-taking discipline that produced it needs fixing. If the memory directory is git-tracked, add the memory store paths explicitly and commit `chore(optmem): clean memory`, then follow the repository's push convention if one exists.
     Done when: the report is delivered and the optional commit is made.
 
 ## Failure recovery
