@@ -1,0 +1,5 @@
+interface:
+  display_name: "OptMem Cleaner"
+  short_description: "Back up, export, curate, and re-import an OptMem memory store"
+policy:
+  allow_implicit_invocation: false
